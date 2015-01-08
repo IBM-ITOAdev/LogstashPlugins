@@ -1,0 +1,194 @@
+<html>
+  <head>
+  <meta charset="UTF-8">
+  <title>logstash for SCAPI - output scacsv</title>
+  <link rel="stylesheet" href="http://logstash.net/style.css">
+  </head>
+  <body>
+  <div class="container">
+    <div class="header">
+      <a href="/"><img src="http://logstash.net/images/logo.png" alt="logstash"/></a>
+      <div class="nav">
+        <a href="http://logstash.net/">home</a>
+        <a href="http://logstash.net/docs/1.4.2">docs</a>
+        <a href="http://logstash.net/docs/1.4.2/learn">about</a>
+        <a href="https://github.com/elasticsearch/logstash/issues">bugs</a>
+      </div>
+    </div>
+    <div id="content_right">
+      <!--main content goes here, yo!-->
+      <div class="content_wrapper">
+        <img src="http://logstash.net/images/logstash.png" alt="logstash" class="mascot" style="float: right;"/>
+         <h2>scacsv</h2>
+<h3>Milestone: <a href="http://logstash.net/docs/1.4.2/plugin-milestones">1</a></h3>
+
+
+
+
+<h3> Synopsis </h3>
+
+Receives a stream of events and outputs files complying with the SCAPI requirements related to header and file naming.
+Essentially provides a match between Logstash's 'streaming' approach and SCAPI's file-based input reqmts.
+This is what it might look like in your config file:
+
+<pre><code>output {
+  scacsv {
+    <a href="#fields">fields</a> => ... # array (required)
+    <a href="#header">header</a> => ... # array (optional), default: {}
+    <a href="#path">path</a> => ... # string (required)
+    <a href="#group">group</a> => ... # string (required)
+    <a href="#flush_interval">flush_interval</a> => ... # number (optional), default: 60
+    <a href="#max_size">max_size</a> => ... # number (optional), default: 0 (not used)
+    <a href="#time_field">time_field</a> => ... # string (optional), default: 'timestamp'
+    <a href="#increment_time">increment_time</a> => ... # number (optional), default: 0
+  }
+}
+</code></pre>
+
+<h3> Details </h3>
+
+<h4> 
+  <a name="fields">
+    fields
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#array">Array</a> </li>
+  <li> There is no default for this setting </li>
+</ul>
+
+<p>Specify which fields from the incoming event you wish to output, and which order</p>
+
+
+<h4> 
+  <a name="header">
+    header
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#hash">Array</a> </li>
+  <li> Default value is {} </li>
+</ul>
+
+<p>
+  Used to specify a string to put as the header (first) line in the file. Useful if you want to override the default ones determined from the fields setting
+</p>
+
+
+<h4> 
+  <a name="path">
+    path
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#string">string</a> </li>
+  <li> Default value is "" </li>
+</ul>
+
+<p>Path of temporary output file. Output will be written to this file until it is time to close the file. Then it will be renamed to SCAPI file convention. The temporary output file path will be then reused for the next set of output. For example, if output data for a CPU group, we might define the following path </p>
+</p><code>path =&gt; "./cpu.csv"</code>.</p>
+
+
+<h4> 
+  <a name="group">
+    group (required setting)
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#dytomh">string</a> </li>
+  <li> There is no default value for this setting. </li>
+</ul>
+
+<p>SCAPI input filenames must have a group identifier as part of the name. The filename generally has this format <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code>. This <code>group</code> parameter is used to specify that group name and it will be used as a prefix when the file is renamed from <code>path</code>. For example</p>
+<p><code>path =&gt; "./cpu"</code>.</p>
+
+
+<h4> 
+  <a name="flush_interval">
+    flush_interval
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="../configuration#number">number</a> </li>
+  <li> Default value is 60 </li>
+</ul>
+
+<p>Amount of time (seconds) to wait before flushing, closing and renaming a file, if there have been no events received. This is to ensure that after a period of idleness, we will output a SCAPI file.</p>
+
+
+<h4> 
+  <a name="max_size">
+    max_size
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="../configuration#number">number</a> </li>
+  <li> Default value is 0 (meaning it is not used)</li>
+</ul>
+
+<p>This will closing and rename a file if there have been <code>max_size</code> events received. This is to limit the size of a file, and sometimes can be useful when 'chopping' a stream into chunks for use in SCAPI</p>
+
+<h4> 
+  <a name="time_field">
+    time_field
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="../configuration#string">string</a> </li>
+  <li> Default value is "timestamp"</li>
+</ul>
+
+<p>Specify which field to use as the 'timestamp'. Values from the 'timestamp' field will be used for <code>starttime</code> (first value seen) and <code>endtime</code> (last value seen) in the file name  <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code></p>
+
+<h4> 
+  <a name="increment_time">
+    increment_time
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="../configuration#boolean">boolean</a> </li>
+  <li> Default value is false</li>
+</ul>
+
+<p>If set to true, it will add '1' to the endtime. This is because SCAPI docs indicate that the endtime timestamp must be greater than the timestamp of the last value in the input file. In order to carry out the increment, you must ensure that the 'timestamp' is a numerical value, typically 'epoch'. The usual way to do this would be to have converted your timestamp upstream to 'epoch', specify epoch in the <code>time_field</code> setting, and set this <code>increment_time</code>to true</p>
+
+
+
+<hr>
+      </div>
+      <div class="clear">
+      </div>
+    </div>
+  </div>
+  <!--closes main container div-->
+  <div class="clear">
+  </div>
+  <div class="footer">
+    <p>
+      Hello! I'm your friendly footer. If you're actually reading this, I'm impressed.
+    </p>
+  </div>
+
+  <noscript>
+    <div style="display:inline;">
+      <img height="1" width="1" style="border-style:none;" alt="" src="//googleads.g.doubleclick.net/pagead/viewthroughconversion/985891458/?value=0&amp;guid=ON&amp;script=0"/>
+    </div>
+  </noscript>
+  <script src="/js/patch.js?1.4.2"></script>
+  </body>
+</html>

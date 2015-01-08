@@ -1,0 +1,141 @@
+<html>
+  <head>
+  <meta charset="UTF-8">
+  <title>logstash for SCAPI - input scabmcfile</title>
+  <link rel="stylesheet" href="http://logstash.net/style.css">
+  </head>
+  <body>
+  <div class="container">
+    <div class="header">
+      <a href="/"><img src="http://logstash.net/images/logo.png" alt="logstash"/></a>
+      <div class="nav">
+        <a href="http://logstash.net/">home</a>
+        <a href="http://logstash.net/docs/1.4.2">docs</a>
+        <a href="http://logstash.net/docs/1.4.2/learn">about</a>
+        <a href="https://github.com/elasticsearch/logstash/issues">bugs</a>
+      </div>
+    </div>
+    <div id="content_right">
+      <!--main content goes here, yo!-->
+      <div class="content_wrapper">
+        <img src="http://logstash.net/images/logstash.png" alt="logstash" class="mascot" style="float: right;"/>
+         <h2>scabmcfile</h2>
+<h3>Milestone: <a href="http://logstash.net/docs/1.4.2/plugin-milestones">1</a></h3>
+
+
+
+
+<h3> Synopsis </h3>
+
+Reads BMC files, produced by the BMC <code>dump_hist</code> command, from a specified directory. It reformats, sorts, pivots (from skinny to wide) the data and produces a stream of events suitable for feeding to other Logstash operators, most typically <a href="./output_scacsv.html">scacsv</a>.
+
+<p>
+<pre><code>input {
+  scabmcfile {
+    <a href="#path">path</a> => ... # string (required)
+    <a href="#done_dir">done_dir</a> => ... # string (required)
+    <a href="#tz_offset">tz_offset</a> => ... # number (optional), default: 0
+  }
+}
+</code></pre>
+
+<h3> Details </h3>
+
+A number of key functions are encapsulated in this <code>input</code>. Taking a look at a typical input file will help understand those.
+<pre><code>server002/MEMORY.MEMORY/MEMFreeMem
+	Thu Nov  6 12:40:00 2014 137356
+	Thu Nov  6 12:41:00 2014 138552
+	...
+	Thu Nov  6 12:45:00 2014 132500
+server002/CPU.CPU/CPUCpuUtil
+	Thu Nov  6 13:23:00 2014 58.7869
+	Thu Nov  6 13:24:00 2014 57.3054
+	...
+	Thu Nov  6 13:31:00 2014 53.9605
+server002/MEMORY.MEMORY/MEMUsedMem
+	Thu Nov  6 12:40:00 2014 237356
+	Thu Nov  6 12:41:00 2014 238552
+	...
+	Thu Nov  6 12:44:00 2014 232472
+server002/MEMORY.MEMORY/MEMFreeMem
+	Thu Nov  6 12:45:00 2014 105888
+	Thu Nov  6 12:46:00 2014 132940
+	...
+	Thu Nov  6 12:51:00 2014 166220
+Total matched parameters: 4
+</code></pre>
+<p>
+First, there is key Node(or server,host etc), Group, Instance and Metric identity information at the start of each section. This is followed by actual timestamp and metric values (indented). The basic pattern is <code>node/group.instance/metric</code> and these fields are used to form the appropriate identities. This information is prepended to the subsequent metric lines to form a set of events. Then this set of events are sorted by time. This is required because the data in the file is ordered by resource etc. info rather than time. Finally, the events are  pivoted from the essentially skinny format, to the required wide.
+</p>
+<p>The output is a stream of events which can be passed directly to a <a href="./output_scacsv.html">scacsv</a> output. 
+
+<h4> 
+  <a name="path">
+    path
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#string">String</a> </li>
+  <li> There is no default for this setting </li>
+</ul>
+
+<p>Path to a directory where input files are to be found . File glob/wildcards are acceptable.</p>
+
+
+<h4> 
+  <a name="done_dir">
+    done_dir
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#string">String</a> </li>
+  <li> There is no default for this setting </li>
+</ul>
+
+<p>
+When each file from the input <code>path</code> is processed, it will be moved to the directory specified by <code>done_dir</code>.
+Note. It is the user responsibility to clean up the content in this directory e.g. by establish periodic jobs to delete content
+</p>
+
+<h4> 
+  <a name="tz_offset">
+    tz_offset
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#number">Number</a> </li>
+  <li> The default value is 0 </li>
+</ul>
+
+<p>
+A number of seconds to add to the epoch time of each event. Use this to ensure that the <code>starttime</code> and <code>endtime</code> assigned downstream by <a href="./input_scabmcfile.html">scabmcfile</a> will be properly aligned. This is sometimes necessary as the plugin converts the timestamp in the data to epoch time, and the offset applied depends on the timezone of the host system, so you can use this setting to compensate.
+</p>
+
+<hr>
+      </div>
+      <div class="clear">
+      </div>
+    </div>
+  </div>
+  <!--closes main container div-->
+  <div class="clear">
+  </div>
+  <div class="footer">
+    <p>
+      Hello! I'm your friendly footer. If you're actually reading this, I'm impressed.
+    </p>
+  </div>
+
+  <noscript>
+    <div style="display:inline;">
+      <img height="1" width="1" style="border-style:none;" alt="" src="//googleads.g.doubleclick.net/pagead/viewthroughconversion/985891458/?value=0&amp;guid=ON&amp;script=0"/>
+    </div>
+  </noscript>
+  <script src="/js/patch.js?1.4.2"></script>
+  </body>
+</html>
