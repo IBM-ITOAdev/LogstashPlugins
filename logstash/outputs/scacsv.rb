@@ -129,8 +129,8 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
 
     end  
 
-      @logger.debug("SCACSV startTime" + @startTime)
-      @logger.debug("SCACSV endTime" + @endTime)
+#      @logger.debug("SCACSV startTime" + @startTime)
+#      @logger.debug("SCACSV endTime" + @endTime)
 
   end #def receive
 
@@ -156,9 +156,19 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
         @logger.debug("closeAndRenameCurrentFile #{path}", :fd => fd)
 
 
-        if @increment_time
+        if (@increment_time & !@endTime.nil?)
           # increment is used to ensure that the end-time on the filename is after the last data value
           @endTime = (@endTime.to_i + 1).to_s
+        end
+
+        if @startTime.nil?  
+          @logger.debug("SCACSV missing start time for + #{group}")
+          @startTime = "noStartTime"
+        end
+
+        if @endTime.nil? then 
+          @logger.debug("SCACSV missing end time for  + #{group}")
+          @endTime = "noEndTime"
         end
 
         newFilename = "#{group}" + "__" + @startTime + "__" + @endTime + ".csv"

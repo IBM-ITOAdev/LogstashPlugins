@@ -22,12 +22,14 @@ class LogStash::Inputs::SCABMCFile < LogStash::Inputs::Base
 
   default :codec, "plain"
 
-#  config :path, :validate => :string, :required => true
   config :path,        :validate => :string, :required => true
   config :done_dir, :validate => :string, :required => true
   config :tz_offset, :validate => :number, :default => 0
   config :groups, :validate => :array, :default => []
-  config :sort, :validate => :string, :default => "" # use internal sort
+  config :poll_interval, :validate => :number, :default => 10
+  config :group_inputs, :validate => :boolean, :default => false 
+         # if true, input files are processed in groups with the same prefix e.g. timestamp__filename.txt
+  config :sort, :validate => :string, :default => "" # rmck: if specified, use specified external sort (e.g. /bin/sort) - not yet functional
 
   public
   def register 
@@ -35,15 +37,22 @@ class LogStash::Inputs::SCABMCFile < LogStash::Inputs::Base
     @k = Hash.new
     @bufferedEvents = []
 
+    @internalSort = false
+
+    if @sort == "" 
+      @internalSort = true
+    else
+      @internalSort = false
+    end
+
+    @eventCount = 0
+
   end
 
   public
-  def run(queue)
+  def processFiles(queue,workingFiles)
 
-    loop do
-      @logger.debug("Scanning for files in ", :path => @path)
-
-      Dir.glob(@path).each do | filename |
+      workingFiles.each do | filename |
 
 puts("Processing file " + filename + "\n")
 
@@ -89,10 +98,15 @@ puts("Processing file " + filename + "\n")
                 event['metric'] + "," +
                 event['value'] 
 
-                @bufferedEvents.push(event)
+                if @internalSort
+                  @bufferedEvents.push(event)
+                else
+                  puts("would output " + event['message'] + "\n")
+                end
+                @eventCount = @eventCount+1
 
               rescue StandardError=>e
-                puts("Error: #{e}  while processing line " + line + " Dropping it\n")
+                puts("Error: #{e}  while processing line " + line + "\n")
               end
             end
           else
@@ -106,20 +120,31 @@ puts("Processing file " + filename + "\n")
         filebasename = File.basename(filename)  
         File.rename(realdirpath + "/" + filebasename, @done_dir + "/" + filebasename)
 
-puts("Buffered events size = " + @bufferedEvents.size.to_s + "\n")
-
+        if @internalSort then
+          puts("Buffered events size = " + @bufferedEvents.size.to_s + "\n")
+        else
+          puts("Output events size = " + @eventCount.to_s + "\n")
+        end
       end   # Dir.glob  do
 
-      if @bufferedEvents.size > 0 
+      if @eventCount > 0 
       # there is some data to process
 
-        puts("About to sort " + @bufferedEvents.size.to_s + " rows\n")
-        @bufferedEvents.sort! { |a,b| a['epoch'] <=> b['epoch'] }
-        puts("Sorted\n")
+        if @internalSort then
+          puts("About to sort " + @bufferedEvents.size.to_s + " rows\n")
+          @bufferedEvents.sort! { |a,b| a['epoch'] <=> b['epoch'] }
+          puts("Sorted\n")
+        else
+          puts("External sort\n")
+        end
 
+        puts("Pivoting\n")
         pivotedEvents = pivotForAllGroups(@bufferedEvents)
+        puts("Pivoted\n")
+
         # Clear for next time around
         @bufferedEvents.clear
+        @eventCount = 0
 
         # SCAWindowMarker added at end
         event = LogStash::Event.new("message" => "SCAWindowMarker")
@@ -129,9 +154,43 @@ puts("Buffered events size = " + @bufferedEvents.size.to_s + "\n")
         pivotedEvents.each do | sortedEvent |
           queue << sortedEvent
         end
-      end # if @bufferedEvents.size >0
+      end # @eventCount  >0
 
-      sleep(2)
+
+  end
+
+
+  public
+  def run(queue)
+
+    loop do
+      @logger.debug("Scanning for files in ", :path => @path)
+
+      dirFiles = Dir.glob(@path)
+
+      if @group_inputs
+        # Gather input files by common prefix (usually, timestamp e.g. <ts1>__filname.txt
+        # process the files with a common prefix together, then move on to the next set
+
+        groupsKey = (dirFiles.collect do |e| e.split("__").first end).sort.uniq
+
+        filesByGroup = Hash.new
+        groupsKey.each do |g|
+          filesByGroup[g] =  dirFiles.select do |e|
+            g == e.split("__").first
+          end
+        end
+
+        groupsKey.each do |g|
+          puts("Processing group " + g + "\n")
+          processFiles(queue,filesByGroup[g])
+        end
+     else
+       # just process them all as ibe set 
+       processFiles(queue,dirFiles)     
+     end
+
+      sleep(@poll_interval)
     end # loop
 
     finished
@@ -140,7 +199,6 @@ puts("Buffered events size = " + @bufferedEvents.size.to_s + "\n")
   public
   def teardown
   end
-
 
   private 
   def pivotForAllGroups( events )

@@ -35,6 +35,8 @@ Reads BMC files, produced by the BMC <code>dump_hist</code> command, from a spec
     <a href="#path">path</a> => ... # string (required)
     <a href="#done_dir">done_dir</a> => ... # string (required)
     <a href="#tz_offset">tz_offset</a> => ... # number (optional), default: 0
+    <a href="#groups">groups</a> => ... # array (optional), []: 0
+    <a href="#poll_interval">poll_interval</a> => ... # number (optional), default: 10
   }
 }
 </code></pre>
@@ -114,6 +116,37 @@ Note. It is the user responsibility to clean up the content in this directory e.
 
 <p>
 A number of seconds to add to the epoch time of each event. Use this to ensure that the <code>starttime</code> and <code>endtime</code> assigned downstream by <a href="./input_scabmcfile.html">scabmcfile</a> will be properly aligned. This is sometimes necessary as the plugin converts the timestamp in the data to epoch time, and the offset applied depends on the timezone of the host system, so you can use this setting to compensate.
+</p>
+
+<h4> 
+  <a name="groups">
+    groups
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#array">Array</a> </li>
+  <li> The default value is [], meaning 'allow all groups' </li>
+</ul>
+
+<p>
+A set of group names, which specify which groups of metrics are to be processed. If the array is empty (default), then all groups encountered will be processed. If one or more group names are provided, then only those will be processed.
+This is extremely useful in filtering larger sets of data, where we want to remove some groups. Ideally, only data we wish to process would be exported, but this is not always the way
+</p>
+
+<h4> 
+  <a name="poll_interval">
+    poll_interval
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#number">Number</a> </li>
+  <li> The default value is 10 </li>
+</ul>
+
+<p>
+The number of seconds to wait between reading filenames from the directory.
 </p>
 
 <hr>
