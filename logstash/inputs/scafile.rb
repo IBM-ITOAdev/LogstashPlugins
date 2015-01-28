@@ -29,7 +29,8 @@ class LogStash::Inputs::SCAFile < LogStash::Inputs::Base
   config :done_dir, :validate => :string, :required => true
          # files moves here af
   config :poll_interval, :validate => :number, :default => 10
-         # if true, input files are processed in groups with the same prefix e.g. timestamp__filename.txt
+  config :ready_file, :validate => :string, :default => ""
+
 
   public
   def register 
@@ -76,13 +77,27 @@ class LogStash::Inputs::SCAFile < LogStash::Inputs::Base
   def run(queue)
 
     loop do
-      @logger.debug("Scanning for files in ", :path => @path)
 
-      dirFiles = Dir.glob(@path).sort   # Process them in alphabetical order, 
+      if @ready_file != "" # ready_file is specified
+        if File.exist?(@ready_file)
+          # A ready_file exists, so process any files that we find
+          File.delete(@ready_file) # remove marker file
+          @logger.debug("Scanning for files in ", :path => @path)
+          dirFiles = Dir.glob(@path).sort   # Process them in alphabetical order, 
+          processFiles(queue,dirFiles)     
+        end
 
-      processFiles(queue,dirFiles)     
+      else
+        # read_file not specified
+        @logger.debug("Scanning for files in ", :path => @path)
+        dirFiles = Dir.glob(@path).sort   # Process them in alphabetical order, 
+        processFiles(queue,dirFiles)     
+
+
+      end
 
       sleep(@poll_interval)
+ 
     end # loop
 
     finished

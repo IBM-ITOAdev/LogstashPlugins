@@ -89,6 +89,9 @@ puts("Processing file " + filename + "\n")
                 event['instance'] = @k['instance']
                 event['metric']   = @k['metric']
   
+# This is the place to filter upstream
+
+
                 event['message'] = 
                 event['epoch'] + "," + 
                 event['timestamp'] + "," + 
@@ -138,9 +141,10 @@ puts("Processing file " + filename + "\n")
           puts("External sort\n")
         end
 
-        puts("Pivoting\n")
+        puts("Pivoting " + @bufferedEvents.length.to_s + "\n")
         pivotedEvents = pivotForAllGroups(@bufferedEvents)
-        puts("Pivoted\n")
+        puts("Pivoting " + @bufferedEvents.length.to_s + " original events to " + 
+              pivotedEvents.length.to_s + " events\n")
 
         # Clear for next time around
         @bufferedEvents.clear
@@ -231,9 +235,15 @@ puts("Processing file " + filename + "\n")
       else
         # different window column value, time to pivot
 
+
+puts("Pivoting group " + pending[currentGroup].to_s + " of length " + pending[currentGroup].length.to_s + "\n")
         pivoted = pivot(pending[currentGroup], target_column, value_column, fixed_columns)
 
+puts("Pivoted group  @ " + event[window_column].to_s + "\n")
+
+puts("Adding partial pivoted set with length = " + pivoted.length.to_s + "\n")
         output.concat(pivoted)     
+puts("Added pivoted set. output length = " + output.length.to_s + "\n")
 
         pending[currentGroup].clear
         pending[currentGroup].add(event)

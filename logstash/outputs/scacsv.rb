@@ -43,6 +43,8 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
   config :max_size, :validate => :number, :default => 0
   config :flush_interval, :validate => :number, :default => 60
   config :time_field, :validate => :string, :default => "timestamp"
+  config :time_format, :validate => :string, :default => "%Y%m%d%H%M%S"
+  config :tz_offset, :validate => :number, :default => 0
   config :increment_time, :validate => :boolean, :default => false
 
   public
@@ -155,20 +157,35 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
         @files.delete(path) # so it will be forgotten and we can open it up again if needed
         @logger.debug("closeAndRenameCurrentFile #{path}", :fd => fd)
 
+        # Now the various time adjustments
+
+        @startTime = (@startTime.to_i + @tz_offset).to_s
+        @endTime   = (@endTime.to_i + @tz_offset).to_s
 
         if (@increment_time & !@endTime.nil?)
           # increment is used to ensure that the end-time on the filename is after the last data value
           @endTime = (@endTime.to_i + 1).to_s
         end
 
+       
+
+
         if @startTime.nil?  
           @logger.debug("SCACSV missing start time for + #{group}")
           @startTime = "noStartTime"
+        else
+          if @time_format != "" then  #empty string implies leave format as found
+            @startTime = DateTime.strptime(@startTime,"%s").strftime(@time_format)
+          end
         end
 
         if @endTime.nil? then 
           @logger.debug("SCACSV missing end time for  + #{group}")
           @endTime = "noEndTime"
+        else
+          if @time_format != "" then  #empty string implies leave format as found
+            @endTime = DateTime.strptime(@endTime,"%s").strftime(@time_format)       
+          end
         end
 
         newFilename = "#{group}" + "__" + @startTime + "__" + @endTime + ".csv"
