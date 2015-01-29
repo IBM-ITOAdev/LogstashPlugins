@@ -9,7 +9,7 @@
 # data extracted, and then moved to a designated 'done' directory. 
 # (this is more a file processing metaphor more than streaming)
 #
-# Version 120115.1 Robert Mckeown
+# Version 120128.1 Robert Mckeown
 #
 ############################################
 
@@ -78,17 +78,26 @@ class LogStash::Inputs::SCAFile < LogStash::Inputs::Base
 
     loop do
 
-      if @ready_file != "" # ready_file is specified
-        if File.exist?(@ready_file)
+ 
+
+      if @ready_file != "" then 
+      # ready_file is specified
+
+        @logger.debug("Ready file specified\n")
+        if File.exist?(@ready_file) then
+          @logger.debug("Ready file exists\n")
           # A ready_file exists, so process any files that we find
           File.delete(@ready_file) # remove marker file
           @logger.debug("Scanning for files in ", :path => @path)
           dirFiles = Dir.glob(@path).sort   # Process them in alphabetical order, 
           processFiles(queue,dirFiles)     
+        else
+          @logger.debug("No ready file\n")
         end
 
       else
         # read_file not specified
+        puts("Ready file does not exit\n")
         @logger.debug("Scanning for files in ", :path => @path)
         dirFiles = Dir.glob(@path).sort   # Process them in alphabetical order, 
         processFiles(queue,dirFiles)     

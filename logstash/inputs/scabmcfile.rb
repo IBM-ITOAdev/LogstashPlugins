@@ -24,6 +24,7 @@ class LogStash::Inputs::SCABMCFile < LogStash::Inputs::Base
 
   config :path,        :validate => :string, :required => true
   config :done_dir, :validate => :string, :required => true
+  config :ready_file, :validate => :string, :default => ""
   config :tz_offset, :validate => :number, :default => 0
   config :groups, :validate => :array, :default => []
   config :poll_interval, :validate => :number, :default => 10
@@ -164,35 +165,51 @@ puts("Processing file " + filename + "\n")
   end
 
 
+
   public
   def run(queue)
 
     loop do
+
       @logger.debug("Scanning for files in ", :path => @path)
 
+
+ #      File.delete(@ready_file) # remove marker file 
       dirFiles = Dir.glob(@path)
 
-      if @group_inputs
-        # Gather input files by common prefix (usually, timestamp e.g. <ts1>__filname.txt
-        # process the files with a common prefix together, then move on to the next set
+      if (@ready_file != "" and File.exist?(@ready_file)) or
+         (@ready_file == "")  then
 
-        groupsKey = (dirFiles.collect do |e| e.split("__").first end).sort.uniq
+         # Ok to process files
+         # cleanup just in case
+         File.delete(@ready_file)  if File.exists?(@ready_file)  
+         dirFiles = Dir.glob(@path) # todo: potential for new read_file to appear between this and previous line
+                                    # remove refs to that file in the dirFiles
 
-        filesByGroup = Hash.new
-        groupsKey.each do |g|
-          filesByGroup[g] =  dirFiles.select do |e|
-            g == e.split("__").first
+        if @group_inputs
+          # Gather input files by common prefix (usually, timestamp e.g. <ts1>__filname.txt
+          # process the files with a common prefix together, then move on to the next set
+
+          groupsKey = (dirFiles.collect do |e| e.split("__").first end).sort.uniq
+
+          filesByGroup = Hash.new
+          groupsKey.each do |g|
+            filesByGroup[g] =  dirFiles.select do |e|
+              g == e.split("__").first
+            end
           end
-        end
 
-        groupsKey.each do |g|
-          puts("Processing group " + g + "\n")
-          processFiles(queue,filesByGroup[g])
+          groupsKey.each do |g|
+            puts("Processing group " + g + "\n")
+            processFiles(queue,filesByGroup[g])
+          end
+        else
+          # just process them all as ibe set 
+          processFiles(queue,dirFiles)     
         end
-     else
-       # just process them all as ibe set 
-       processFiles(queue,dirFiles)     
-     end
+      end
+
+# end process files
 
       sleep(@poll_interval)
     end # loop
