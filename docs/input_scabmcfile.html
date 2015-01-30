@@ -34,6 +34,7 @@ Reads BMC files, produced by the BMC <code>dump_hist</code> command, from a spec
   scabmcfile {
     <a href="#path">path</a> => ... # string (required)
     <a href="#done_dir">done_dir</a> => ... # string (required)
+    <a href="#ready_file">ready_file</a> => ... # string (optional), default: ""
     <a href="#tz_offset">tz_offset</a> => ... # number (optional), default: 0
     <a href="#groups">groups</a> => ... # array (optional), []: 0
     <a href="#poll_interval">poll_interval</a> => ... # number (optional), default: 10
@@ -85,7 +86,6 @@ First, there is key Node(or server,host etc), Group, Instance and Metric identit
 
 <p>Path to a directory where input files are to be found . File glob/wildcards are acceptable.</p>
 
-
 <h4> 
   <a name="done_dir">
     done_dir
@@ -102,6 +102,23 @@ First, there is key Node(or server,host etc), Group, Instance and Metric identit
 When each file from the input <code>path</code> is processed, it will be moved to the directory specified by <code>done_dir</code>.
 Note. It is the user responsibility to clean up the content in this directory e.g. by establish periodic jobs to delete content
 </p>
+
+<h4> 
+  <a name="ready_file">
+    ready_file
+    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#string">String</a> </li>
+  <li> The default value is "" </li>
+</ul>
+
+<p>
+If this string has value, that value should be the full pathname to a file, which will be used as a token file. When <code>scabmcfile</code> find this token file, it will delete it, and then process the files in the directory in the normal way. If the string is empty, then files are processed normally.  The presence or absence of such a token file can be used to control when file occurs. For example, you can keep moving files into the directory, but they will only be picked up if the token file is present. 
+</p>
+
 
 <h4> 
   <a name="tz_offset">

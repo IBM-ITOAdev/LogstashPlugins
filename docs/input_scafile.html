@@ -34,6 +34,7 @@ Reads files from a specified directory in a sorted order, emits each line in eac
   scafile {
     <a href="#path">path</a> => ... # string (required)
     <a href="#done_dir">done_dir</a> => ... # string (required)
+    <a href="#ready_file">ready_file</a> => ... # string (optional), default: ""
     <a href="#poll_interval">poll_interval</a> => ... # number (optional), default: 10
   }
 }
@@ -75,6 +76,15 @@ This input scan the specified <code>path</path> every <code>poll_interval</code>
 <p>
 Directory where processed files are moved to.
 </p>
+
+<h4><a name="ready_file">ready_file</a></h4>                     
+<ul>                
+  <li> Value type is <a href="http://logstash.net/docs/1.4.2/configuration#string">String</a> </li>
+  <li> The default value is "" </li>                                                                                                             
+</ul>                                                          
+<p>                                                       
+If this string has value, that value should be the full pathname to a file, which will be used as a token file. When <code>scafile</code> finds this token file, it will delete it, and then process the files in the directory in the normal way. If the string is empty, then files are processed normally.  The presence or absence of such a token file can be used to control when file occurs. For example, you can keep moving files into the directory, but they will only be picked up if the token file is present.                           
+</p>                                                                                                        
 
 <h4> 
   <a name="poll_interval">
