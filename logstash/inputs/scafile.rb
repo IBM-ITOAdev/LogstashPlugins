@@ -97,7 +97,6 @@ class LogStash::Inputs::SCAFile < LogStash::Inputs::Base
 
       else
         # read_file not specified
-        puts("Ready file does not exit\n")
         @logger.debug("Scanning for files in ", :path => @path)
         dirFiles = Dir.glob(@path).sort   # Process them in alphabetical order, 
         processFiles(queue,dirFiles)     

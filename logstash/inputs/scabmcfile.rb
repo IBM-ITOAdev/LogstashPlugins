@@ -252,15 +252,8 @@ puts("Processing file " + filename + "\n")
       else
         # different window column value, time to pivot
 
-
-puts("Pivoting group " + pending[currentGroup].to_s + " of length " + pending[currentGroup].length.to_s + "\n")
         pivoted = pivot(pending[currentGroup], target_column, value_column, fixed_columns)
-
-puts("Pivoted group  @ " + event[window_column].to_s + "\n")
-
-puts("Adding partial pivoted set with length = " + pivoted.length.to_s + "\n")
         output.concat(pivoted)     
-puts("Added pivoted set. output length = " + output.length.to_s + "\n")
 
         pending[currentGroup].clear
         pending[currentGroup].add(event)
