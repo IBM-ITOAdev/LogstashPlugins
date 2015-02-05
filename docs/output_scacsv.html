@@ -40,12 +40,16 @@ This is what it might look like in your config file:
     <a href="#flush_interval">flush_interval</a> => ... # number (optional), default: 60
     <a href="#max_size">max_size</a> => ... # number (optional), default: 0 (not used)
     <a href="#time_field">time_field</a> => ... # string (optional), default: 'timestamp'
-    <a href="#increment_time">increment_time</a> => ... # number (optional), default: 0
+    <a href="#keep_original_timestamps">keep_original_timestamps</a> => ... # boolean (optional), default: false
+    <a href="#increment_time">increment_time</a> => ... # boolean (optional), default: false
   }
 }
 </code></pre>
 
 <h3> Details </h3>
+
+Note: by default this plugin expects timestamp provided to be in epoch time. You can override this expectation and supply non-epoch timestamps which will be used as using the <a href="#keep_original_timestamps">keep_original_timestamps</a> configuration option. However, such non-epoch timestamps will not automatically be incremented when determining the end time of the file
+
 
 <h4> 
   <a name="fields">
@@ -154,9 +158,22 @@ This is what it might look like in your config file:
 <p>Specify which field to use as the 'timestamp'. Values from the 'timestamp' field will be used for <code>starttime</code> (first value seen) and <code>endtime</code> (last value seen) in the file name  <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code></p>
 
 <h4> 
-  <a name="increment_time">
-    increment_time
+  <a name="time_field">
+    time_field
     
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="../configuration#string">string</a> </li>
+  <li> Default value is "timestamp"</li>
+</ul>
+
+<p>Specify which field to use as the 'timestamp'. Values from the 'timestamp' field will be used for <code>starttime</code> (first value seen) and <code>endtime</code> (last value seen) in the file name  <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code></p>
+
+<h4> 
+  <a name="keep_original_timestamps">
+    keep_original_timestamps
 </a>
 </h4>
 
@@ -165,7 +182,24 @@ This is what it might look like in your config file:
   <li> Default value is false</li>
 </ul>
 
-<p>If set to true, it will add '1' to the endtime. This is because SCAPI docs indicate that the endtime timestamp must be greater than the timestamp of the last value in the input file. In order to carry out the increment, you must ensure that the 'timestamp' is a numerical value, typically 'epoch'. The usual way to do this would be to have converted your timestamp upstream to 'epoch', specify epoch in the <code>time_field</code> setting, and set this <code>increment_time</code>to true</p>
+<p>
+By default, <code>scacsv</code> expects epoch as its input timestamp. By setting this option to <code>true</code>, you can provide any string you like as timestamp, and <code>scacsv</code>will pass it through,unchanged, will not increment end time, and will assign your timestamps to the outputfilename.
+</p>
+
+<h4> 
+  <a name="increment_time">
+    increment_time
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="../configuration#boolean">boolean</a> </li>
+  <li> Default value is false</li>
+</ul>
+
+<p>
+By default, the supplied timestamp will be left as is. If set to <code>true</code>, then the timestamp will be incremented by 1. This is to ensure that the end time is greater than the last event time in the file - per PI datafile requirements
+</p>
 
 
 

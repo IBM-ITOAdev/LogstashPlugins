@@ -46,6 +46,7 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
   config :time_format, :validate => :string, :default => "%Y%m%d%H%M%S"
   config :tz_offset, :validate => :number, :default => 0
   config :increment_time, :validate => :boolean, :default => false
+  config :keep_original_timestamps, :validate => :boolean, :default => false
 
   public
   def register
@@ -105,7 +106,6 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
         end
       end
 
-
       csv_values = @fields.map {|name| get_value(name, event)}
       fd.write(csv_values.to_csv(@csv_options))
 
@@ -159,22 +159,23 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
 
         # Now the various time adjustments
 
-        @startTime = (@startTime.to_i + @tz_offset).to_s
-        @endTime   = (@endTime.to_i + @tz_offset).to_s
+        if @time_format != ""
+          # only attempt this if we are not keeping the original timestamps
+          # assumption here is we have epoch times
+          @startTime = (@startTime.to_i + @tz_offset).to_s
+          @endTime   = (@endTime.to_i + @tz_offset).to_s
+        end
 
         if (@increment_time & !@endTime.nil?)
           # increment is used to ensure that the end-time on the filename is after the last data value
           @endTime = (@endTime.to_i + 1).to_s
         end
 
-       
-
-
         if @startTime.nil?  
           @logger.debug("SCACSV missing start time for + #{group}")
           @startTime = "noStartTime"
         else
-          if @time_format != "" then  #empty string implies leave format as found
+          if @time_format != "" then  #output format supplied, convert to that
             @startTime = DateTime.strptime(@startTime,"%s").strftime(@time_format)
           end
         end
@@ -183,7 +184,7 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
           @logger.debug("SCACSV missing end time for  + #{group}")
           @endTime = "noEndTime"
         else
-          if @time_format != "" then  #empty string implies leave format as found
+          if @time_format != "" then  #output format supplied, convert to that
             @endTime = DateTime.strptime(@endTime,"%s").strftime(@time_format)       
           end
         end
