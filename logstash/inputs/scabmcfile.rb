@@ -6,7 +6,7 @@
 # 
 # Logstash mediation filter for SCAPI/BMC patrol
 #
-# Version 070115.1 Robert Mckeown
+# Version 090215.1 Robert Mckeown
 #
 ############################################
 
@@ -30,6 +30,7 @@ class LogStash::Inputs::SCABMCFile < LogStash::Inputs::Base
   config :poll_interval, :validate => :number, :default => 10
   config :group_inputs, :validate => :boolean, :default => false 
          # if true, input files are processed in groups with the same prefix e.g. timestamp__filename.txt
+  config :pivot, :validate => :boolean, :default => true
   config :sort, :validate => :string, :default => "" # rmck: if specified, use specified external sort (e.g. /bin/sort) - not yet functional
 
   public
@@ -142,10 +143,20 @@ puts("Processing file " + filename + "\n")
           puts("External sort\n")
         end
 
-        puts("Pivoting " + @bufferedEvents.length.to_s + "\n")
-        pivotedEvents = pivotForAllGroups(@bufferedEvents)
-        puts("Pivoting " + @bufferedEvents.length.to_s + " original events to " + 
+        if @pivot
+          puts("Pivoting " + @bufferedEvents.length.to_s + "\n")
+          pivotedEvents = pivotForAllGroups(@bufferedEvents)
+          puts("Pivoting " + @bufferedEvents.length.to_s + " original events to " + 
               pivotedEvents.length.to_s + " events\n")
+        else
+          puts("Skipping pivot. Assigning resource/metric identities for " + @bufferedEvents.length.to_s + " events\n")
+          pivotedEvents = @bufferedEvents.map { |e|        
+            e['piResource'] = e['node'] + "_" + e['instance']
+            e['piMetric']   = e['group'] + "_" + e['metric']
+            e
+          }
+          puts("Finished assigning resource/metric identities\n")
+        end
 
         # Clear for next time around
         @bufferedEvents.clear
