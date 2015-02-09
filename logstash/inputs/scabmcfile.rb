@@ -30,6 +30,7 @@ class LogStash::Inputs::SCABMCFile < LogStash::Inputs::Base
   config :poll_interval, :validate => :number, :default => 10
   config :group_inputs, :validate => :boolean, :default => false 
          # if true, input files are processed in groups with the same prefix e.g. timestamp__filename.txt
+  config :metric_filters, :validate => :hash, :default => {}
   config :pivot, :validate => :boolean, :default => true
   config :sort, :validate => :string, :default => "" # rmck: if specified, use specified external sort (e.g. /bin/sort) - not yet functional
 
@@ -64,7 +65,9 @@ puts("Processing file " + filename + "\n")
             # End of set
           elsif line =~ /^\t/ 
             # data line starts with tab
-            if  (@groups.empty? or @groups.include?(@k['group']))
+            if  (@groups.empty? or @groups.include?(@k['group'])) and
+                (@metric_filters.empty? or
+                  (@metric_filters.keys.include?(@k['group']) and @metric_filters[@k['group']].include?(@k['metric'])))
 
               # then only process data line if we didn't specify groups to include
               # (ie include all groups) or if we did specify groups, then
