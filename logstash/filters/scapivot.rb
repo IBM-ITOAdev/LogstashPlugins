@@ -41,7 +41,7 @@ class LogStash::Filters::SCAPivot < LogStash::Filters::Base
   config :fixed_columns, :validate => :array
   config :target_column, :validate => :string
   config :value_column, :validate => :string
-#  config :flush_interval, :validate => :number, :default => 60
+  config :flush_interval, :validate => :number, :default => 60
 
   public
   def initialize(config = {})

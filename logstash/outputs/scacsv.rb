@@ -4,13 +4,14 @@
 #                                                                               
 # Logstash mediation output for SCAPI
 #                                                                               
-# Version 081214.2 Robert Mckeown                                               
+# Version 160215.1 Robert Mckeown                                               
 #                                                                               
 ############################################     
 
 require "csv"
 require "logstash/namespace"
 require "logstash/outputs/file"
+require 'java' # for the java data format stuff
 
 # SCACSV - based upon original Logstash CSV output.
 # 
@@ -43,10 +44,14 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
   config :max_size, :validate => :number, :default => 0
   config :flush_interval, :validate => :number, :default => 60
   config :time_field, :validate => :string, :default => "timestamp"
-  config :time_format, :validate => :string, :default => "%Y%m%d%H%M%S"
+#  config :time_format, :validate => :string, :default => "%Y%m%d%H%M%S"
+  config :time_field_format, :validate => :string, :required => true
+  config :timestamp_output_format, :validate => :string, :default => "" # "yyyyMMddHHmmss" # java format
+
+
+
   config :tz_offset, :validate => :number, :default => 0
   config :increment_time, :validate => :boolean, :default => false
-  config :keep_original_timestamps, :validate => :boolean, :default => false
 
   public
   def register
@@ -131,9 +136,6 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
 
     end  
 
-#      @logger.debug("SCACSV startTime" + @startTime)
-#      @logger.debug("SCACSV endTime" + @endTime)
-
   end #def receive
 
   private
@@ -147,9 +149,54 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
     end
   end
 
+  private
+  def epochAsJavaDate( epochTimestamp )
+
+    x = 0
+     if epochTimestamp.to_s.length == 13
+       x = java.util.Date.new(epochTimestamp.to_i)
+     else
+       # should be 10
+       x = java.util.Date.new(epochTimestamp.to_i * 1000)
+     end
+    x
+  end
+
+  def formatOutputTime( timestamp, time_field_format, timestamp_output_format, missingString )
+
+    outputString = ""
+
+    begin
+
+      if timestamp.nil? then
+        @logger.debug("SCACSV " + missingString + " for  #{group}")
+      elsif timestamp_output_format == "epoch" then  
+        outputString = timestamp.to_s  
+      elsif timestamp_output_format == "" then
+        # use time_field format
+        if time_field_format == "epoch" then
+          outputString = timestamp.to_s
+        else
+          df = java.text.SimpleDateFormat.new(time_field_format)
+          outputString = df.format(epochAsJavaDate(timestamp))
+        end
+      else # explicit java timeformat supplied
+        df = java.text.SimpleDateFormat.new(timestamp_output_format)
+        outputString = df.format(epochAsJavaDate(timestamp))
+      end
+ 
+    rescue Exception => e
+      @logger.error("Exception determining output file timestamp. " + missingString, :exception => e)
+      outputString = missingString
+    end
+
+    outputString
+
+  end
+
   def closeAndRenameCurrentFile
 
-    # cloned and changed from the 'file.rb' operatore
+    # cloned and changed from the 'file.rb' operator
     # even though this is in a loop - assumption is that we have one file here for the SCA CSV use
     @files.each do |path, fd|
       begin
@@ -159,35 +206,40 @@ class LogStash::Outputs::SCACSV < LogStash::Outputs::File
 
         # Now the various time adjustments
 
-        if @time_format != ""
-          # only attempt this if we are not keeping the original timestamps
-          # assumption here is we have epoch times
-          @startTime = (@startTime.to_i + @tz_offset).to_s
-          @endTime   = (@endTime.to_i + @tz_offset).to_s
+        if (@time_field_format != "epoch")
+          # if not epoch, then we expect java timestamp format
+          # so must convert start/end times
+
+          df = java.text.SimpleDateFormat.new(@time_field_format)
+          nStartTime = df.parse(@startTime)
+          nEndTime   = df.parse(@endTime)
+
+          @startTime = df.parse(@startTime).getTime
+          @endTime   = df.parse(@endTime).getTime
+
         end
 
-        if (@increment_time & !@endTime.nil?)
-          # increment is used to ensure that the end-time on the filename is after the last data value
-          @endTime = (@endTime.to_i + 1).to_s
+        # Ensure epoch time from here on out
+
+        if (!@startTime.nil?)
+          @startTime = @startTime.to_i + @tz_offset
         end
 
-        if @startTime.nil?  
-          @logger.debug("SCACSV missing start time for + #{group}")
-          @startTime = "noStartTime"
-        else
-          if @time_format != "" then  #output format supplied, convert to that
-            @startTime = DateTime.strptime(@startTime,"%s").strftime(@time_format)
+        if (!@endTime.nil?)
+          @endTime   = @endTime.to_i + @tz_offset
+          if (@increment_time)
+            # increment is used to ensure that the end-time on the filename is after the last data value
+            @endTime = @endTime.to_i + 1
           end
         end
 
-        if @endTime.nil? then 
-          @logger.debug("SCACSV missing end time for  + #{group}")
-          @endTime = "noEndTime"
-        else
-          if @time_format != "" then  #output format supplied, convert to that
-            @endTime = DateTime.strptime(@endTime,"%s").strftime(@time_format)       
-          end
-        end
+        # then do conversion for output
+
+#        @startTime = formatOutputTime( time, time_field_format, timestamp_output_format, missingString )
+         @startTime = formatOutputTime( @startTime, @time_field_format, @timestamp_output_format, "noStartTime" )
+         @endTime   = formatOutputTime( @endTime,   @time_field_format, @timestamp_output_format, "noEndTime" )
+         
+        # timestamps are strings here
 
         newFilename = "#{group}" + "__" + @startTime + "__" + @endTime + ".csv"
 
