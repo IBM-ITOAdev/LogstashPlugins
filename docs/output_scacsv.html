@@ -37,10 +37,11 @@ This is what it might look like in your config file:
     <a href="#header">header</a> => ... # array (optional), default: {}
     <a href="#path">path</a> => ... # string (required)
     <a href="#group">group</a> => ... # string (required)
-    <a href="#flush_interval">flush_interval</a> => ... # number (optional), default: 60
     <a href="#max_size">max_size</a> => ... # number (optional), default: 0 (not used)
+    <a href="#flush_interval">flush_interval</a> => ... # number (optional), default: 60
     <a href="#time_field">time_field</a> => ... # string (optional), default: 'timestamp'
-    <a href="#keep_original_timestamps">keep_original_timestamps</a> => ... # boolean (optional), default: false
+    <a href="#time_field_format">time_field_format</a> => ... # string (required)
+    <a href="#timestamp_output_format">timestamp_output_format</a> => ... # string (optional), default: ""
     <a href="#increment_time">increment_time</a> => ... # boolean (optional), default: false
   }
 }
@@ -79,7 +80,7 @@ Note: by default this plugin expects timestamp provided to be in epoch time. You
 </ul>
 
 <p>
-  Used to specify a string to put as the header (first) line in the file. Useful if you want to override the default ones determined from the fields setting
+  Used to specify a string to put as the header (first) line in the file. Useful if you want to override the default ones which are determined from the fields setting
 </p>
 
 
@@ -113,6 +114,18 @@ Note: by default this plugin expects timestamp provided to be in epoch time. You
 <p>SCAPI input filenames must have a group identifier as part of the name. The filename generally has this format <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code>. This <code>group</code> parameter is used to specify that group name and it will be used as a prefix when the file is renamed from <code>path</code>. For example</p>
 <p><code>path =&gt; "./cpu"</code>.</p>
 
+<h4> 
+  <a name="max_size">
+    max_size    
+</a>
+</h4>
+
+<ul>
+  <li> Value type is <a href="../configuration#number">number</a> </li>
+  <li> Default value is 0 (meaning it is not used)</li>
+</ul>
+
+<p>This will closing and rename a file if there have been <code>max_size</code> events received. This is to limit the size of a file, and sometimes can be useful when 'chopping' a stream into chunks for use in SCAPI</p>
 
 <h4> 
   <a name="flush_interval">
@@ -129,19 +142,6 @@ Note: by default this plugin expects timestamp provided to be in epoch time. You
 <p>Amount of time (seconds) to wait before flushing, closing and renaming a file, if there have been no events received. This is to ensure that after a period of idleness, we will output a SCAPI file.</p>
 
 
-<h4> 
-  <a name="max_size">
-    max_size
-    
-</a>
-</h4>
-
-<ul>
-  <li> Value type is <a href="../configuration#number">number</a> </li>
-  <li> Default value is 0 (meaning it is not used)</li>
-</ul>
-
-<p>This will closing and rename a file if there have been <code>max_size</code> events received. This is to limit the size of a file, and sometimes can be useful when 'chopping' a stream into chunks for use in SCAPI</p>
 
 <h4> 
   <a name="time_field">
@@ -155,36 +155,36 @@ Note: by default this plugin expects timestamp provided to be in epoch time. You
   <li> Default value is "timestamp"</li>
 </ul>
 
-<p>Specify which field to use as the 'timestamp'. Values from the 'timestamp' field will be used for <code>starttime</code> (first value seen) and <code>endtime</code> (last value seen) in the file name  <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code></p>
+<p>Specify which field to use as the 'timestamp' when determining filename times. Values from the 'timestamp' field will be used for <code>starttime</code> (first value seen) and <code>endtime</code> (last value seen) in the file name  <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code></p>
 
 <h4> 
-  <a name="time_field">
-    time_field
+  <a name="time_field_format (required setting)">
+    time_field_format
     
 </a>
 </h4>
 
 <ul>
   <li> Value type is <a href="../configuration#string">string</a> </li>
-  <li> Default value is "timestamp"</li>
+  <li> There is no default value for this setting</li>
 </ul>
 
-<p>Specify which field to use as the 'timestamp'. Values from the 'timestamp' field will be used for <code>starttime</code> (first value seen) and <code>endtime</code> (last value seen) in the file name  <code>&lt;group&gt;__&lt;starttime&gt;__&lt;endtime&gt;.csv</code></p>
+<p>A format string, in java SimpleDateFormat format, to specify how to interpret the timefield values e.g. <code>"yyyy-MM-dd HH:mm:ss"</code>. </p>
 
 <h4> 
-  <a name="keep_original_timestamps">
-    keep_original_timestamps
+  <a name="timestamp_output_format">
+    timestamp_output_format
+    
 </a>
 </h4>
 
 <ul>
-  <li> Value type is <a href="../configuration#boolean">boolean</a> </li>
-  <li> Default value is false</li>
+  <li> Value type is <a href="../configuration#string">string</a> </li>
+  <li> If not specified, it uses the format declared by <code>time_field_format</code></li>
 </ul>
 
-<p>
-By default, <code>scacsv</code> expects epoch as its input timestamp. By setting this option to <code>true</code>, you can provide any string you like as timestamp, and <code>scacsv</code>will pass it through,unchanged, will not increment end time, and will assign your timestamps to the outputfilename.
-</p>
+<p>A format string, in java SimpleDateFormat format, to specify how to output filename timestamps</p>
+
 
 <h4> 
   <a name="increment_time">
