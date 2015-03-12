@@ -12,6 +12,7 @@ require "logstash/inputs/base"
 require "logstash/namespace"
 require "java"
 require "rubygems"
+require "pstore"
 
 # This Input Plug Is Intended to Read Events from a JDBC url
 #
@@ -37,6 +38,7 @@ class LogStash::Inputs::Genjdbc < LogStash::Inputs::Base
   config :jdbcTimeField, :validate => :string, :required => false
   config :jdbcPollInterval, :validate => :string, :required => false
   config :jdbcCollectionStartTime, :validate => :string, :required => false
+  config :jdbcPStoreFile, :validate => :string, :required => false, :default => "genjdbc.pstore"
 
   # The 'read' timeout in seconds. If a particular connection is idle for
   # more than this timeout period, we will assume it is dead and close it.
@@ -46,6 +48,8 @@ class LogStash::Inputs::Genjdbc < LogStash::Inputs::Base
 
   def initialize(*args)
     super(*args)
+
+
   end # def initialize
 
   public
@@ -107,9 +111,12 @@ class LogStash::Inputs::Genjdbc < LogStash::Inputs::Base
     # Create a new connection to the jdbc URL, using the connection properties
     @logger.info("Creating Connection to JDBC URL", :address => "#{@jdbcURL}")
     conn = driver.connect(@jdbcURL,props)
+
+    # Prepare the store where we'll track most recent timestamp
+    store = PStore.new(@jdbcPStoreFile)
     
     # Set a start time
-    lastEvent = DateTime.now
+    lastEvent = store.transaction { store.fetch(:lastEvent,DateTime.now) }
     # If set, make an override from the config..
     if !@jdbcCollectionStartTime.nil?
       lastEvent = DateTime.parse @jdbcCollectionStartTime
@@ -165,6 +172,7 @@ class LogStash::Inputs::Genjdbc < LogStash::Inputs::Base
             # debug: puts "Date Parsed is : "+eventTime.to_s
             if eventTime > lastEvent
               lastEvent = eventTime
+              store.transaction do store[:lastEvent] = lastEvent end
             end
           end
           
