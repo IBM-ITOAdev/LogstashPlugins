@@ -48,8 +48,6 @@ class LogStash::Inputs::Genjdbc < LogStash::Inputs::Base
 
   def initialize(*args)
     super(*args)
-
-
   end # def initialize
 
   public
@@ -96,6 +94,11 @@ class LogStash::Inputs::Genjdbc < LogStash::Inputs::Base
       driverurl = "jdbc:mysql://"+@jdbcHost+":"+@jdbcPort+"/"+@jdbcDBName
       # Spec. jdbc:derby://<server>[:<port>]/<databaseName>[;<URL attribute>=<value>]
     end
+    if @jdbcTargetDB == "mssql"
+      driver = com.microsoft.sqlserver.jdbc.SQLServerDriver.new
+      driverurl = "jdbc:sqlserver://"+@jdbcHost+":"+@jdbcPort+";databaseName="+@jdbcDBName
+      # Spec. jdbc:sqlserver://<server_name>:1433;databaseName=<db_name>
+    end
     
     
     # Check the jdbcURL setting to see if there is an override, and use constructed URL if not.
@@ -121,21 +124,43 @@ class LogStash::Inputs::Genjdbc < LogStash::Inputs::Base
     if !@jdbcCollectionStartTime.nil?
       lastEvent = DateTime.parse @jdbcCollectionStartTime
     end
-    
+
+    # Read query from file if so configured
+    if @jdbcSQLQuery.start_with? "file:"
+      queryFilename = @jdbcSQLQuery
+      queryFilename.slice! "file:"
+      queryFile = File.open(queryFilename,"rb")
+      originalQuery = queryFile.read
+      queryFile.close
+    else
+      originalQuery = @jdbcSQLQuery
+    end
+  
     # Main Loop
     while true
       
       # Debug : puts "lastEvent : "+lastEvent.to_s
       jdbclastEvent = lastEvent.strftime("%Y-%m-%d %H:%M:%S.%L")
+      currentTime = jdbclastEvent
       
       stmt = conn.create_statement
-      
-      # Escape sql query provided from config file
-      if @jdbcSQLQuery.include? " where " then
-        escapedQuery = @jdbcSQLQuery + " and "+@jdbcTimeField+" > '"+jdbclastEvent+"'"
+
+      # If query explicity refers to CURRENTTIME, then use that directly
+      if originalQuery.include? "%{CURRENTTIME}"
+        escapedQuery = originalQuery.gsub("%{CURRENTTIME}",currentTime)
       else
-        escapedQuery = @jdbcSQLQuery + " where "+@jdbcTimeField+" > '"+jdbclastEvent+"'"
+      # if not, we'll implicity assemble query
+      # Suggest removing this option completely and making it explicity
+      # Escape sql query provided from config file
+        begin
+          if originalQuery.include? " where " then
+            escapedQuery = originalQuery + " and "+@jdbcTimeField+" > '" + jdbclastEvent + "'" + " order by " +@jdbcTimeField
+          else
+            escapedQuery = originalQuery + " where "+@jdbcTimeField+" > '" + jdbclastEvent + "'" +  " order by " +@jdbcTimeField
+          end
+        end
       end
+
 
       escapedQuery = escapedQuery.gsub(/\\\"/,"\"")
 
